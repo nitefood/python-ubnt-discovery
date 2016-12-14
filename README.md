@@ -1,6 +1,10 @@
 # python-ubnt-discovery
 Command line python script to discover Ubiquiti devices on the local LAN segment.
 
+**Requirements :** the script uses the python scapy library to craft and send the raw packet. You can install it with:
+
+`pip install scapy`
+
 ####Ubiquiti Discovery Protocol brief description
 
 *Disclaimer: this code is based exclusively on packet sniffing and analysis, there are some fields that remain unknown to me.
