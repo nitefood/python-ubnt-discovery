@@ -19,17 +19,29 @@ from scapy.all import (
 UBNT_MAC         = '01'
 UBNT_MAC_AND_IP  = '02'
 UBNT_FIRMWARE    = '03'
-UBNT_UNKNOWN_2   = '0a'
+UBNT_UPTIME      = '0a'
 UBNT_RADIONAME   = '0b'
 UBNT_MODEL_SHORT = '0c'
 UBNT_ESSID       = '0d'
-UBNT_UNKNOWN_3   = '0e'
+UBNT_WLAN_MODE   = '0e'
 UBNT_UNKNOWN_1   = '10'
 UBNT_MODEL_FULL  = '14'
 
 # UBNT discovery packet payload and reply signature
 UBNT_REQUEST_PAYLOAD = '01000000'
 UBNT_REPLY_SIGNATURE = '010000'
+
+
+# Wirelss modes
+UBNT_WIRELESS_MODES ={
+    '\x00': "Auto",
+    '\x01': "adhoc",
+    '\x02': "Station",
+    '\x03': "AP",
+    '\x04': "Repeater",
+    '\x05': "Secondary",
+    '\x06': "Monitor",
+};
 
 # Offset within the payload that contains the amount of bytes remaining
 offset_PayloadRemainingBytes = 3
@@ -121,8 +133,12 @@ def ubntDiscovery(iface):
                 RadioModelShort = fieldData
             elif fieldType == UBNT_FIRMWARE:
                 RadioFirmware = fieldData
+            elif fieldType == UBNT_UPTIME:
+                RadioUptime = int(fieldData.encode('hex'), 16)
             elif fieldType == UBNT_ESSID:
                 RadioEssid = fieldData
+            elif fieldType == UBNT_WLAN_MODE:
+                RadioWlanMode = UBNT_WIRELESS_MODES[fieldData]
             # We don't know or care about other field types. Continue walking the payload.
             pointer += fieldLen
             remaining_bytes -= fieldLen
