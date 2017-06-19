@@ -9,7 +9,11 @@
 import argparse
 import json
 from random import randint
-from scapy.all import *
+
+from scapy.all import (
+    Ether, IP, UDP, Raw,
+    get_if_hwaddr, get_if_list, conf, srp)
+
 
 # UBNT field types
 UBNT_MAC         = '01'
@@ -41,20 +45,28 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Discovers ubiquiti devices on network using ubnt device discovery protocol")
     parser.add_argument(
+        'interface', help="the interface you want to use for discovery")
+    parser.add_argument(
         '--output-format', type=str, default='text', choices=('text', 'json'),
         help="output format")
 
     return parser.parse_args()
 
 
-def ubntDiscovery():
+def ubntDiscovery(iface):
+
+    if not iface in get_if_list():
+        raise ValueError('{} is not a valid network interface'.format(iface))
+
+    src_mac = get_if_hwaddr(iface)
 
     # Prepare and send our discovery packet
     conf.checkIPaddr = False # we're broadcasting our discovery packet from a local IP (local->255.255.255.255)
                              # but we'll expect a reply on the broadcast IP as well (radioIP->255.255.255.255),
                              # not on our local IP.
                              # Therefore we must disable destination IP checking in scapy
-    ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff")/\
+    conf.iface = iface
+    ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff", src=src_mac)/\
                             IP(dst="255.255.255.255")/\
                             UDP(sport=randint(1024,65535),dport=10001)/\
                             Raw(UBNT_REQUEST_PAYLOAD.decode('hex'))
