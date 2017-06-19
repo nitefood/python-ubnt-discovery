@@ -6,6 +6,8 @@
 #         www.bvnetworks.it              #
 ##########################################
 
+import argparse
+import json
 from random import randint
 from scapy.all import *
 
@@ -33,6 +35,16 @@ offset_FirstField = 4
 
 # Discovery timeout. Change this for quicker discovery
 DISCOVERY_TIMEOUT = 5
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Discovers ubiquiti devices on network using ubnt device discovery protocol")
+    parser.add_argument(
+        '--output-format', type=str, default='text', choices=('text', 'json'),
+        help="output format")
+
+    return parser.parse_args()
 
 
 def ubntDiscovery():
@@ -109,24 +121,31 @@ def ubntDiscovery():
         Radio['model']          = RadioModel
         Radio['essid']          = RadioEssid
         Radio['firmware']       = RadioFirmware
+        Radio['uptime']         = RadioUptime
         Radio['model_short']    = RadioModelShort
+        Radio['wlan_mode']      = RadioWlanMode
         RadioList.append(Radio)
 
     return RadioList
 
 
-print("\nDiscovery in progress...")
-RadioList = ubntDiscovery()
-found_radios = len(RadioList)
-if found_radios:
-    print("\nDiscovered " + str(found_radios) + " radio(s):")
-    for Radio in RadioList:
-        print("\n--- [" + Radio['model'] + "] ---")
-        print("  IP Address  : " + Radio['ip'])
-        print("  Name        : " + Radio['name'])
-        print("  Model       : " + Radio['model_short'])
-        print("  Firmware    : " + Radio['firmware'])
-        print("  ESSID       : " + Radio['essid'])
-        print("  MAC Address : " + Radio['mac'])
-else:
-    print("\nNo radios discovered\n")
+if __name__ == '__main__':
+    args = parse_args()
+    print("\nDiscovery in progress...")
+    RadioList = ubntDiscovery(args.interface)
+    found_radios = len(RadioList)
+    if args.output_format == 'text':
+        if found_radios:
+            print("\nDiscovered " + str(found_radios) + " radio(s):")
+            for Radio in RadioList:
+                print("\n--- [" + Radio['model'] + "] ---")
+                print("  IP Address  : " + Radio['ip'])
+                print("  Name        : " + Radio['name'])
+                print("  Model       : " + Radio['model_short'])
+                print("  Firmware    : " + Radio['firmware'])
+                print("  ESSID       : " + Radio['essid'])
+                print("  MAC Address : " + Radio['mac'])
+        else:
+            print("\nNo radios discovered\n")
+    elif args.output_format == 'json':
+        print(json.dumps(RadioList, indent=2))
