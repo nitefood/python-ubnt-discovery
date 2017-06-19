@@ -9,6 +9,7 @@
 import argparse
 import json
 from random import randint
+import sys
 
 from scapy.all import (
     Ether, IP, UDP, Raw,
@@ -160,7 +161,7 @@ def ubntDiscovery(iface):
 
 if __name__ == '__main__':
     args = parse_args()
-    print("\nDiscovery in progress...")
+    sys.stderr.write("\nDiscovery in progress...\n")
     RadioList = ubntDiscovery(args.interface)
     found_radios = len(RadioList)
     if args.output_format == 'text':
@@ -175,6 +176,6 @@ if __name__ == '__main__':
                 print("  ESSID       : " + Radio['essid'])
                 print("  MAC Address : " + Radio['mac'])
         else:
-            print("\nNo radios discovered\n")
+            sys.stderr.write("\n\nNo radios discovered\n")
     elif args.output_format == 'json':
         print(json.dumps(RadioList, indent=2))
