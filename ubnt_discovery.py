@@ -65,6 +65,7 @@ def ubntDiscovery(iface):
                              # but we'll expect a reply on the broadcast IP as well (radioIP->255.255.255.255),
                              # not on our local IP.
                              # Therefore we must disable destination IP checking in scapy
+    conf.sniff_promisc=False
     conf.iface = iface
     ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff", src=src_mac)/\
                             IP(dst="255.255.255.255")/\
