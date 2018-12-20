@@ -52,7 +52,7 @@ def ubntDiscovery():
                      timeout=DISCOVERY_TIMEOUT)
 
     # Loop over received packets
-    RadioList = []
+    RadioList = {}
     for snd,rcv in ans:
 
         # We received a broadcast packet in reply to our discovery
@@ -110,7 +110,9 @@ def ubntDiscovery():
         Radio['essid']          = RadioEssid
         Radio['firmware']       = RadioFirmware
         Radio['model_short']    = RadioModelShort
-        RadioList.append(Radio)
+
+        if RadioIP not in RadioList:
+            RadioList[RadioIP] = Radio
 
     return RadioList
 
@@ -121,12 +123,12 @@ found_radios = len(RadioList)
 if found_radios:
     print("\nDiscovered " + str(found_radios) + " radio(s):")
     for Radio in RadioList:
-        print("\n--- [" + Radio['model'] + "] ---")
-        print("  IP Address  : " + Radio['ip'])
-        print("  Name        : " + Radio['name'])
-        print("  Model       : " + Radio['model_short'])
-        print("  Firmware    : " + Radio['firmware'])
-        print("  ESSID       : " + Radio['essid'])
-        print("  MAC Address : " + Radio['mac'])
+        print("\n--- [" + RadioList[Radio]['model'] + "] ---")
+        print("  IP Address  : " + RadioList[Radio]['ip'])
+        print("  Name        : " + RadioList[Radio]['name'])
+        print("  Model       : " + RadioList[Radio]['model_short'])
+        print("  Firmware    : " + RadioList[Radio]['firmware'])
+        print("  ESSID       : " + RadioList[Radio]['essid'])
+        print("  MAC Address : " + RadioList[Radio]['mac'])
 else:
     print("\nNo radios discovered\n")
