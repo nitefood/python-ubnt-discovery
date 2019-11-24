@@ -6,24 +6,43 @@
 #         www.bvnetworks.it              #
 ##########################################
 
+import argparse
+import json
 from random import randint
-from scapy.all import *
+import sys
+
+from scapy.all import (
+    Ether, IP, UDP, Raw,
+    get_if_hwaddr, get_if_list, conf, srp)
+
 
 # UBNT field types
 UBNT_MAC         = '01'
 UBNT_MAC_AND_IP  = '02'
 UBNT_FIRMWARE    = '03'
-UBNT_UNKNOWN_2   = '0a'
+UBNT_UPTIME      = '0a'
 UBNT_RADIONAME   = '0b'
 UBNT_MODEL_SHORT = '0c'
 UBNT_ESSID       = '0d'
-UBNT_UNKNOWN_3   = '0e'
+UBNT_WLAN_MODE   = '0e'
 UBNT_UNKNOWN_1   = '10'
 UBNT_MODEL_FULL  = '14'
 
 # UBNT discovery packet payload and reply signature
 UBNT_REQUEST_PAYLOAD = '01000000'
 UBNT_REPLY_SIGNATURE = '010000'
+
+
+# Wirelss modes
+UBNT_WIRELESS_MODES ={
+    '\x00': "Auto",
+    '\x01': "adhoc",
+    '\x02': "Station",
+    '\x03': "AP",
+    '\x04': "Repeater",
+    '\x05': "Secondary",
+    '\x06': "Monitor",
+};
 
 # Offset within the payload that contains the amount of bytes remaining
 offset_PayloadRemainingBytes = 3
@@ -35,14 +54,33 @@ offset_FirstField = 4
 DISCOVERY_TIMEOUT = 5
 
 
-def ubntDiscovery():
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description="Discovers ubiquiti devices on network using ubnt device discovery protocol")
+    parser.add_argument(
+        'interface', help="the interface you want to use for discovery")
+    parser.add_argument(
+        '--output-format', type=str, default='text', choices=('text', 'json'),
+        help="output format")
+
+    return parser.parse_args()
+
+
+def ubntDiscovery(iface):
+
+    if not iface in get_if_list():
+        raise ValueError('{} is not a valid network interface'.format(iface))
+
+    src_mac = get_if_hwaddr(iface)
 
     # Prepare and send our discovery packet
     conf.checkIPaddr = False # we're broadcasting our discovery packet from a local IP (local->255.255.255.255)
                              # but we'll expect a reply on the broadcast IP as well (radioIP->255.255.255.255),
                              # not on our local IP.
                              # Therefore we must disable destination IP checking in scapy
-    ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff")/\
+    conf.sniff_promisc=False
+    conf.iface = iface
+    ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff", src=src_mac)/\
                             IP(dst="255.255.255.255")/\
                             UDP(sport=randint(1024,65535),dport=10001)/\
                             Raw(UBNT_REQUEST_PAYLOAD.decode('hex'))
@@ -96,8 +134,12 @@ def ubntDiscovery():
                 RadioModelShort = fieldData
             elif fieldType == UBNT_FIRMWARE:
                 RadioFirmware = fieldData
+            elif fieldType == UBNT_UPTIME:
+                RadioUptime = int(fieldData.encode('hex'), 16)
             elif fieldType == UBNT_ESSID:
                 RadioEssid = fieldData
+            elif fieldType == UBNT_WLAN_MODE:
+                RadioWlanMode = UBNT_WIRELESS_MODES[fieldData]
             # We don't know or care about other field types. Continue walking the payload.
             pointer += fieldLen
             remaining_bytes -= fieldLen
@@ -109,24 +151,31 @@ def ubntDiscovery():
         Radio['model']          = RadioModel
         Radio['essid']          = RadioEssid
         Radio['firmware']       = RadioFirmware
+        Radio['uptime']         = RadioUptime
         Radio['model_short']    = RadioModelShort
+        Radio['wlan_mode']      = RadioWlanMode
         RadioList.append(Radio)
 
     return RadioList
 
 
-print("\nDiscovery in progress...")
-RadioList = ubntDiscovery()
-found_radios = len(RadioList)
-if found_radios:
-    print("\nDiscovered " + str(found_radios) + " radio(s):")
-    for Radio in RadioList:
-        print("\n--- [" + Radio['model'] + "] ---")
-        print("  IP Address  : " + Radio['ip'])
-        print("  Name        : " + Radio['name'])
-        print("  Model       : " + Radio['model_short'])
-        print("  Firmware    : " + Radio['firmware'])
-        print("  ESSID       : " + Radio['essid'])
-        print("  MAC Address : " + Radio['mac'])
-else:
-    print("\nNo radios discovered\n")
+if __name__ == '__main__':
+    args = parse_args()
+    sys.stderr.write("\nDiscovery in progress...\n")
+    RadioList = ubntDiscovery(args.interface)
+    found_radios = len(RadioList)
+    if args.output_format == 'text':
+        if found_radios:
+            print("\nDiscovered " + str(found_radios) + " radio(s):")
+            for Radio in RadioList:
+                print("\n--- [" + Radio['model'] + "] ---")
+                print("  IP Address  : " + Radio['ip'])
+                print("  Name        : " + Radio['name'])
+                print("  Model       : " + Radio['model_short'])
+                print("  Firmware    : " + Radio['firmware'])
+                print("  ESSID       : " + Radio['essid'])
+                print("  MAC Address : " + Radio['mac'])
+        else:
+            sys.stderr.write("\n\nNo radios discovered\n")
+    elif args.output_format == 'json':
+        print(json.dumps(RadioList, indent=2))
