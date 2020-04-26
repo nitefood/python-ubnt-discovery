@@ -9,11 +9,23 @@
 import argparse
 import json
 from random import randint
+import struct
 import sys
 
 from scapy.all import (
     Ether, IP, UDP, Raw,
     get_if_hwaddr, get_if_list, conf, srp)
+
+def extract_ipv4(mac_and_ip_value):
+    """ Extract the Ipv4 from the MAC+IP field
+
+    :return: str dotted representation of the IPv4 (ex: 1.2.3.4)
+    """
+    ip_part = mac_and_ip_value[6:]
+    ip_numbers = struct.unpack('BBBB', ip_part)
+    ip_str = '{}.{}.{}.{}'.format(*ip_numbers)
+    return ip_str
+
 
 
 # UBNT field types
@@ -103,12 +115,15 @@ def ubntDiscovery(iface):
         else:
             continue            # Not a valid UBNT discovery reply, skip to next received packet
 
-        RadioIP = rcv[IP].src   # We avoid going through the hassle of enumerating type '02' fields (MAC+IP). There may
-                                # be multiple IPs on the radio, and therefore multiple type '02' fields in the
-                                # reply packet. We conveniently pick the address from which the radio
-                                # replied to our discovery request directly from the reply packet, and store it.
+        # Use the received pkt IP in case we hove no better information
+        # RadioIP might be overriden by an IP mentioned in the payload.
+        RadioIP = rcv[IP].src
 
-        RadioMAC = rcv[Ether].src # Read comment above, this time regarding the MAC Address.
+        # We avoid going through the hassle of enumerating type '02' fields (MAC+IP). There may
+        # be multiple MACs on the radio, and therefore multiple type '02' fields in the
+        # reply packet. We conveniently pick the address from which the radio
+        # replied to our discovery request directly from the reply packet, and store it.
+        RadioMAC = rcv[Ether].src
         RadioMAC = RadioMAC.upper()
 
         # Retrieve payload size (excluding initial signature)
@@ -141,6 +156,12 @@ def ubntDiscovery(iface):
                 RadioEssid = fieldData
             elif fieldType == UBNT_WLAN_MODE:
                 RadioWlanMode = UBNT_WIRELESS_MODES[fieldData]
+            elif fieldType == UBNT_MAC_AND_IP:
+                # There might be several IPs
+                # Let's use the latest seen that is *not* 169.254.X.X (APIPA)
+                ipv4 = extract_ipv4(fieldData)
+                if not ipv4.startswith('169.254'):
+                    RadioIP = ipv4
             # We don't know or care about other field types. Continue walking the payload.
             pointer += fieldLen
             remaining_bytes -= fieldLen
