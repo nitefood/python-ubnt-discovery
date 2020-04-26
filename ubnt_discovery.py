@@ -87,7 +87,8 @@ def ubntDiscovery(iface):
     ans, unans = srp(ubnt_discovery_packet,
                      multi=True,    # We want to allow multiple radios to reply to our discovery packet
                      verbose=0,     # Suppress scapy output
-                     timeout=DISCOVERY_TIMEOUT)
+                     timeout=DISCOVERY_TIMEOUT,
+                     retry=-3)
 
     # Loop over received packets
     RadioList = []
