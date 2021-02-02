@@ -46,6 +46,7 @@ FIELD_PARSERS = {
     0x16: ('firmware_short', bytes.decode, False),
     0x17: ('unknown3', lambda data: int.from_bytes(data, 'big'), False),
     0x18: ('default_config', lambda data: int.from_bytes(data, 'big'), False),
+    0x2a: ('unknown17', str, False),
     0x2d: ('unknown5 (led related?)', str, False),
     0x2e: ('unknown6 (led related?)', str, False),
     0x15: ('model_short', bytes.decode, False),
@@ -61,7 +62,7 @@ FIELD_PARSERS = {
 }
 
 # Basic fields: src MAC and IP of reply message; not parsed
-BASIC_FIELDS = { 'mac', 'ip', 'Signature version' }
+BASIC_FIELDS = { 'mac', 'ip' }
 
 # String representation of non-basic fields
 FIELD_STR = {
@@ -110,7 +111,7 @@ def iter_fields(data, _len):
 
 def ubntResponseParse(rcv):
     # We received a broadcast packet in reply to our discovery
-    payload = rcv[IP].load
+    payload = rcv.load
 
     if payload[0:4] == UBNT_REQUEST_PAYLOAD: # Check for a UBNT discovery request (first 4 bytes of the payload should be \x01\x00\x00\x00)
         return False
@@ -122,12 +123,6 @@ def ubntResponseParse(rcv):
         Device['Signature version'] = '2'
     else:
         return False            # Not a valid UBNT discovery reply, skip to next received packet
-
-    Device['ip'] = \
-        rcv[IP].src   # We avoid going through the hassle of enumerating type '02' fields (MAC+IP). There may
-                            # be multiple IPs on the device, and therefore multiple type '02' fields in the
-                            # reply packet. We conveniently pick the address from which the device
-                            # replied to our discovery request directly from the reply packet, and store it.
 
     Device['mac'] = rcv[Ether].src.upper() # Read comment above, this time regarding the MAC Address.
 
@@ -186,8 +181,6 @@ def ubntDiscovery(iface):
 
     # passive discovery
 
-    send(ubnt_discovery_packet, verbose=0)
-
     ans = sniff(filter='dst port 10001', timeout=DISCOVERY_TIMEOUT_PASSIVE)
 
     # Loop over received packets
@@ -213,7 +206,6 @@ if __name__ == '__main__':
         fmt = "  %-30s: %s"
         for Device in DeviceList:
             print("\n---[ %s ]---" % Device['mac'])
-            print(fmt % ("IP Address", Device['ip']))
             for field in Device:
                 if field in BASIC_FIELDS: continue
                 print(fmt % (FIELD_STR.get(field, field),
