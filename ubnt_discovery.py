@@ -78,6 +78,16 @@ FIELD_PARSERS = {
     0x2e: ('unknown8 (led related?)', str, False),
 }
 
+FIELD_PARSERS_V1 = {
+    0x14: ('model', bytes.decode, False),
+    0x18: ('default_config', lambda data: int.from_bytes(data, 'big'), False),
+}
+
+FIELD_PARSERS_V2 = {
+    0x14: ('DST_MACID', str, False),
+    0x18: ('MGMT_IS_LOCATING', lambda data: int.from_bytes(data, 'big'), False),
+}
+
 # Basic fields: src MAC and IP of reply message; not parsed
 BASIC_FIELDS = { 'mac', 'ip' }
 
