@@ -62,7 +62,7 @@ FIELD_PARSERS = {
     0x1c: ('SSHD_PORT', str, False),
     0x1d: ('PLATFORM_UVP', str, False),
     0x1e: ('TALK_ANONYMOUS_DEVICE_ID', str, False),
-# Same for these
+# Same for these, it might be that it is v1 vs v2
     0x14: ('model', bytes.decode, False),
     0x14: ('DST_MACID', str, False),
     0x18: ('default_config', lambda data: int.from_bytes(data, 'big'), False),
