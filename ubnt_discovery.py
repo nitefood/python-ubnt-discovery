@@ -191,7 +191,6 @@ def ubntDiscovery(args):
 
                     device = ubntResponseParse(packet)
 
-                    print(device)
                     if device != False:
                         DeviceList.append(device)
 
