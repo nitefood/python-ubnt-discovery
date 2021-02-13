@@ -240,10 +240,18 @@ def ubntDiscovery(args):
         # Loop over received packets
         for rcv in packets:
 
-            # Store the data we gathered from the reply packet
-            device = ubntResponseParse(rcv)
-            if device != False:
-                DeviceList.append(device)
+            # for some reason on some devices the filer doe snot work so we do it manually here again
+
+            if UDP in rcv:
+
+                if rcv[UDP].dport == 10001 or rcv[UDP].sport == 10001:
+
+                    device = ubntResponseParse(rcv)
+
+                    # Store the data we gathered from the packet
+
+                    if device != False:
+                        DeviceList.append(device)
 
     return DeviceList
 
