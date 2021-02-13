@@ -12,6 +12,7 @@ from random import randint
 import sys
 from struct import unpack
 from scapy.all import *
+import scapy.contrib.igmp
 
 def mac_repr(data):
     return ':'.join(('%02x' % b) for b in data)
@@ -229,6 +230,10 @@ def ubntDiscovery(args):
 
 
         # passive discovery
+
+        # igmp join
+
+        send(IP(dst="233.89.188.1")/scapy.contrib.igmp.IGMP())
 
         packets = sniff(filter='dst port 10001', timeout=DISCOVERY_TIMEOUT_PASSIVE)
 
