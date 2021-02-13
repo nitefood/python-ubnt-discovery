@@ -121,7 +121,9 @@ def parse_args():
     parser = argparse.ArgumentParser(
         description="Discovers ubiquiti devices on network using ubnt device discovery protocol")
     parser.add_argument(
-        'interface', help="the interface you want to use for discovery")
+        '--interface', type=str, help="the interface you want to use for discovery")
+    parser.add_argument(
+        '--pcap', type=str, help="analyze a pcap file for discovery info")
     parser.add_argument(
         '--output-format', type=str, default='text', choices=('text', 'json'),
         help="output format")
@@ -173,58 +175,81 @@ def ubntResponseParse(rcv):
 
     return Device
 
-def ubntDiscovery(iface):
+def ubntDiscovery(args):
 
-    if not iface in get_if_list():
-        raise ValueError('{} is not a valid network interface'.format(iface))
+    DeviceList = []
 
-    src_mac = get_if_hwaddr(iface)
+    if args.pcap is not None:
 
-    # Prepare and send our discovery packet
-    conf.checkIPaddr = False # we're broadcasting our discovery packet from a local IP (local->255.255.255.255)
+        packets = rdpcap(args.pcap)
+
+        for packet in packets:
+
+            if packet[UDP].dport == 10001 or packet[UDP].sport == 10001:
+
+                device = ubntResponseParse(packet)
+
+                print(device)
+                if device != False:
+                    DeviceList.append(device)
+
+    if args.interface is not None:
+
+        iface = args.interface
+
+        if not args.interface in get_if_list():
+            raise ValueError('{} is not a valid network interface'.format(iface))
+
+        src_mac = get_if_hwaddr(args.interface)
+
+        # Prepare and send our discovery packet
+        conf.checkIPaddr = False # we're broadcasting our discovery packet from a local IP (local->255.255.255.255)
                              # but we'll expect a reply on the broadcast IP as well (deviceIP->255.255.255.255),
                              # not on our local IP.
                              # Therefore we must disable destination IP checking in scapy
-    conf.iface = iface
-    ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff", src=src_mac)/\
-                            IP(dst="255.255.255.255")/\
-                            UDP(sport=randint(1024,65535),dport=10001)/\
-                            Raw(UBNT_REQUEST_PAYLOAD)
+        conf.iface = args.interface
+        ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff", src=src_mac)/\
+                                IP(dst="255.255.255.255")/\
+                                UDP(sport=randint(1024,65535),dport=10001)/\
+                                Raw(UBNT_REQUEST_PAYLOAD)
 
-    # do active discovery first, after it we do passive discovery
+        # do active discovery first, after it we do passive discovery
 
-    ans, unans = srp(ubnt_discovery_packet,
+        ans, unans = srp(ubnt_discovery_packet,
                      multi=True,    # We want to allow multiple radios to reply to our discovery packet
                      verbose=0,     # Suppress scapy output
                      timeout=DISCOVERY_TIMEOUT_ACTIVE)
 
-    DeviceList = []
-    for snd,rcv in ans:
+        wrpcap('active.pcap', ans)
 
-        # Store the data we gathered from the reply packet
-        device = ubntResponseParse(rcv)
-        if device != False:
-            DeviceList.append(device)
+        for snd,rcv in ans:
+
+            # Store the data we gathered from the reply packet
+            device = ubntResponseParse(rcv)
+            if device != False:
+                DeviceList.append(device)
 
 
-    # passive discovery
+        # passive discovery
 
-    ans = sniff(filter='dst port 10001', timeout=DISCOVERY_TIMEOUT_PASSIVE)
+        packets = sniff(filter='dst port 10001', timeout=DISCOVERY_TIMEOUT_PASSIVE)
 
-    # Loop over received packets
-    for rcv in ans:
+        wrpcap('passive.pcap', packets)
 
-        # Store the data we gathered from the reply packet
-        device = ubntResponseParse(rcv)
-        if device != False:
-            DeviceList.append(device)
+        # Loop over received packets
+        for rcv in packets:
+
+            # Store the data we gathered from the reply packet
+            device = ubntResponseParse(rcv)
+            if device != False:
+                DeviceList.append(device)
 
     return DeviceList
 
 if __name__ == '__main__':
     args = parse_args()
     sys.stderr.write("\nDiscovery in progress...\n")
-    DeviceList = ubntDiscovery(args.interface)
+    DeviceList = ubntDiscovery(args)
     found_devices = len(DeviceList)
     if args.output_format == 'text':
         if not found_devices:

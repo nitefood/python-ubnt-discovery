@@ -9,13 +9,15 @@ Command line python script to discover Ubiquiti devices on the local LAN segment
 
 *Disclaimer: there are some fields that remain unknown. This code may therefore not be compatible with all devices.*
 
+specify the interface with `--interface <interface name>` or/and load a pcap file with `--pcap <file>`
+
 There are multiple methods of the Ubiquiti discovery protocol.
 
 Method 1 works by sending an UDP packet to the local broadcast address (255.255.255.255) on port **10001**,
 containing 4 bytes in the payload, namely `01 00 00 00`, and waiting for UDP replies destined to the local
 broadcast address.
 
-Method 2 works by periodacly sending an UDP packet to the local broadcast address (255.255.255.255) on port **10001**. 
+Method 2 works by periodacly sending an UDP packet to the local broadcast address (255.255.255.255) on port **10001**.
 
 Method 3 is multicast on the address 233.89.188.1.
 
