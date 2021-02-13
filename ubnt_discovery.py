@@ -62,11 +62,6 @@ FIELD_PARSERS = {
     0x0f: ('MGMT_URL', str, False),
     0x11: ('MGMT_LOCATE_SECONDS', str, False),
     0x1d: ('PLATFORM_UVP', str, False),
-# Same for these, it might be that it is v1 vs v2
-    0x14: ('model', bytes.decode, False),
-    0x14: ('DST_MACID', str, False),
-    0x18: ('default_config', lambda data: int.from_bytes(data, 'big'), False),
-    0x18: ('MGMT_IS_LOCATING', lambda data: int.from_bytes(data, 'big'), False),
 # These need names
     0x0f: ('unknown1 (unifi-os related?)', lambda data: int.from_bytes(data, 'big'), False),
     0x21: ('unknown2', str, False),
@@ -148,9 +143,11 @@ def ubntResponseParse(rcv):
     elif payload[0:3] == UBNT_V1_SIGNATURE: # Check for a valid UBNT discovery reply (first 3 bytes of the payload should be \x01\x00\x00)
         Device = {}          # This should be a valid discovery reply packet sent by an Ubiquiti device
         Device['Signature version'] = '1' # this is not allways correct
+        fieldparsersPacketSpecific = {**FIELD_PARSERS, **FIELD_PARSERS_V1}
     elif payload[0:3] == UBNT_V2_SIGNATURE:
         Device = {}          # This should be a valid discovery broadcast packet sent by an Ubiquiti device
         Device['Signature version'] = '2'
+        fieldparsersPacketSpecific = {**FIELD_PARSERS, **FIELD_PARSERS_V1}
     else:
         return False            # Not a valid UBNT discovery reply, skip to next received packet
 
@@ -160,13 +157,13 @@ def ubntResponseParse(rcv):
     # Take into account the payload length in offset 3
     for fieldType, fieldData in iter_fields(payload[4:], payload[3]):
 
-        if fieldType not in FIELD_PARSERS:
+        if fieldType not in fieldparsersPacketSpecific:
             sys.stderr.write("notice: unknown field type 0x%x: data %s\n" %
                              (fieldType, fieldData))
             continue
 
         # Parse the field and store in Device
-        fieldName, fieldParser, isMany = FIELD_PARSERS[fieldType]
+        fieldName, fieldParser, isMany = fieldparsersPacketSpecific[fieldType]
         if isMany:
             if fieldName not in Device: Device[fieldName] = []
             Device[fieldName].append(fieldParser(fieldData))
