@@ -233,7 +233,7 @@ def ubntDiscovery(args):
 
         # igmp join
 
-        send(IP(dst="233.89.188.1")/scapy.contrib.igmp.IGMP())
+        send(IP(dst="233.89.188.1")/scapy.contrib.igmp.IGMP(),verbose=0)
 
         packets = sniff(filter='dst port 10001', timeout=DISCOVERY_TIMEOUT_PASSIVE)
 
