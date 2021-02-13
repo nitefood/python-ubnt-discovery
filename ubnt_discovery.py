@@ -185,13 +185,15 @@ def ubntDiscovery(args):
 
         for packet in packets:
 
-            if packet[UDP].dport == 10001 or packet[UDP].sport == 10001:
+            if UDP in packet:
 
-                device = ubntResponseParse(packet)
+                if packet[UDP].dport == 10001 or packet[UDP].sport == 10001:
 
-                print(device)
-                if device != False:
-                    DeviceList.append(device)
+                    device = ubntResponseParse(packet)
+
+                    print(device)
+                    if device != False:
+                        DeviceList.append(device)
 
     if args.interface is not None:
 
