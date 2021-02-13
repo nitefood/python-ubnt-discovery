@@ -36,6 +36,7 @@ FIELD_PARSERS = {
     0x01: ('HWADDR', mac_repr, False),
     0x02: ('IPINFO', lambda data: '%s;%s' % (mac_repr(data[0:6]), ip_repr(data[6:10])), True),
     0x03: ('FWVERSION', bytes.decode, False),
+    0x04: ('ADDR_ENTRY', lambda data: int.from_bytes(data, 'big'), False),
     0x0a: ('UPTIME', lambda data: int.from_bytes(data, 'big'), False),
     0x0b: ('HOSTNAME', bytes.decode, False),
     0x0c: ('PLATFORM', bytes.decode, False),
@@ -53,7 +54,6 @@ FIELD_PARSERS = {
     0x1c: ('SSHD_PORT', lambda data: int.from_bytes(data, 'big'), False),
     0x1e: ('TALK_ANONYMOUS_DEVICE_ID', bytes.decode, False),
 # These need checking
-    0x04: ('ADDR_ENTRY', str, False),
     0x05: ('MAC_ENTRY', str, False),
     0x06: ('USERNAME', str, False),
     0x07: ('SALT', str, False),
