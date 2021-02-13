@@ -84,26 +84,6 @@ FIELD_PARSERS_V2 = {
     0x18: ('MGMT_IS_LOCATING', lambda data: int.from_bytes(data, 'big'), False),
 }
 
-# Basic fields: src MAC and IP of reply message; not parsed
-BASIC_FIELDS = { 'mac', 'ip' }
-
-# String representation of non-basic fields
-FIELD_STR = {
-    'HWADDR':     'HWADDR',
-#    'HWADDR':     'MAC (Serial)',
-#    'mac3':     'MAC 3',
-#    'IPINFO':   'MAC-IP Pairs',
-#    'FWVERSION': 'Firmware',
-#    'firmware_short': 'Firmware (short)',
-#    'uptime':   'Uptime',
-#    'name':     'Hostname',
-#    'model_short':  'Model (short)',
-#    'essid':    'ESSID',
-#    'wlan_mode':'WLAN Mode',
-#    'model':    'Model',
-#    'default_config':    'Default configuration',
-}
-
 # UBNT discovery packet payload and reply signature
 UBNT_REQUEST_PAYLOAD = b'\x01\x00\x00\x00'
 UBNT_V1_SIGNATURE = b'\x01\x00\x00'
@@ -271,8 +251,6 @@ if __name__ == '__main__':
         for Device in DeviceList:
             print("\n---[ %s ]---" % Device['mac'])
             for field in Device:
-                if field in BASIC_FIELDS: continue
-                print(fmt % (FIELD_STR.get(field, field),
-                             Device[field]))
+                print(fmt % (field, Device[field]))
     elif args.output_format == 'json':
         print(json.dumps(DeviceList, indent=2))
