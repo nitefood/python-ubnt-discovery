@@ -56,6 +56,7 @@ FIELD_PARSERS = {
     0x1b: ('REQUIRED_VERSION', bytes.decode, False),
     0x1c: ('SSHD_PORT', lambda data: int.from_bytes(data, 'big'), False),
     0x1e: ('TALK_ANONYMOUS_DEVICE_ID', bytes.decode, False),
+    0x20: ('DEVICE_ID', bytes.decode, False),
     0x21: ('HWADDR2', bytes.decode, False),
     0x28: ('acces hub mac', bytes.decode, False),
     0x2b: ('BRANCH?', bytes.decode, False),
