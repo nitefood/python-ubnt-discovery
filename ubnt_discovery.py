@@ -44,6 +44,7 @@ FIELD_PARSERS = {
     0x0c: ('PLATFORM', bytes.decode, False),
     0x0d: ('ESSID', bytes.decode, False),
     0x0e: ('WMODE', lambda data: UBNT_WIRELESS_MODES.get(data[0], 'unknown'), False),
+    0x0f: ('MGMT_URL', lambda data: int.from_bytes(data, 'big'), False),
     0x10: ('SYSTEM_ID', lambda data: int.from_bytes(data, 'big'), False),
     0x12: ('SEQ', lambda data: int.from_bytes(data, 'big'), False),
     0x13: ('SRC_MACID', mac_repr, False),
@@ -55,28 +56,32 @@ FIELD_PARSERS = {
     0x1b: ('REQUIRED_VERSION', bytes.decode, False),
     0x1c: ('SSHD_PORT', lambda data: int.from_bytes(data, 'big'), False),
     0x1e: ('TALK_ANONYMOUS_DEVICE_ID', bytes.decode, False),
+    0x21: ('HWADDR2', bytes.decode, False),
+    0x28: ('acces hub mac', bytes.decode, False),
+    0x2b: ('BRANCH?', bytes.decode, False),
 # These need checking
     0x06: ('USERNAME', str, False),
     0x07: ('SALT', str, False),
     0x08: ('RND_CHALLENGE', str, False),
     0x09: ('CHALLENGE_RESPONSE', str, False),
-    0x0f: ('MGMT_URL', str, False),
     0x11: ('MGMT_LOCATE_SECONDS', str, False),
     0x1d: ('PLATFORM_UVP', str, False),
 # These need names
-    0x0f: ('unknown1 (unifi-os related?)', lambda data: int.from_bytes(data, 'big'), False),
-    0x21: ('unknown2', str, False),
     0x22: ('unknown3', str, False),
-    0x24: ('unknown4 TS?', lambda data: int.from_bytes(data, 'big'), False),
     0x27: ('unknown5', str, False),
-    0x2a: ('unknown6', str, False),
-    0x2d: ('unknown7 (led related?)', lambda data: int.from_bytes(data, 'big'), False),
-    0x2e: ('unknown8 (led related?)', str, False),
+    0x2d: ('unknown7 (led/access related)', lambda data: int.from_bytes(data, 'big'), False),
+    0x2e: ('unknown8 (led related)', str, False),
+#these need better names
+    0x24: ('unknown int?', lambda data: int.from_bytes(data, 'big'), False),
+    0x2a: ('unknown user?', str, False),
+    0x2c: ('unknown bool', lambda data: int.from_bytes(data, 'big'), False),
 }
 
+# if unknown7 = 0 then unknown8 is all 0's
+
 FIELD_PARSERS_V1 = {
-    0x14: ('model', bytes.decode, False),
-    0x18: ('default_config', lambda data: int.from_bytes(data, 'big'), False),
+    0x14: ('MODEL', bytes.decode, False),
+    0x18: ('MGMT_IS_DEFAULT', lambda data: int.from_bytes(data, 'big'), False),
 }
 
 FIELD_PARSERS_V2 = {
@@ -132,7 +137,7 @@ def ubntResponseParse(rcv):
     else:
         return False            # Not a valid UBNT discovery reply, skip to next received packet
 
-    Device['mac'] = rcv[Ether].src.upper() # Read comment above, this time regarding the MAC Address.
+    Device['pckt_mac'] = rcv[Ether].src.upper() # Read comment above, this time regarding the MAC Address.
 
     # Walk the reply payload, staring from offset 04 (just after reply signature and payload size).
     # Take into account the payload length in offset 3
@@ -249,7 +254,7 @@ if __name__ == '__main__':
         print("\nDiscovered %d device(s):" % found_devices)
         fmt = "  %-30s: %s"
         for Device in DeviceList:
-            print("\n---[ %s ]---" % Device['mac'])
+            print("\n---[ %s ]---" % Device['pckt_mac'])
             for field in Device:
                 print(fmt % (field, Device[field]))
     elif args.output_format == 'json':
