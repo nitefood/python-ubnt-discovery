@@ -70,11 +70,10 @@ FIELD_PARSERS = {
 # These need names
     0x22: ('unknown3', str, False),
     0x27: ('unknown5', str, False),
-    0x2d: ('unknown7 (led/access related)', lambda data: int.from_bytes(data, 'big'), False),
+    0x2d: ('unknown7 (led/access related)', str, False),
     0x2e: ('unknown8 (led related)', str, False),
 #these need better names
     0x24: ('unknown int?', lambda data: int.from_bytes(data, 'big'), False),
-    0x2a: ('unknown user?', str, False),
     0x2c: ('unknown bool', lambda data: int.from_bytes(data, 'big'), False),
 }
 
@@ -83,11 +82,13 @@ FIELD_PARSERS = {
 FIELD_PARSERS_V1 = {
     0x14: ('MODEL', bytes.decode, False),
     0x18: ('MGMT_IS_DEFAULT', lambda data: int.from_bytes(data, 'big'), False),
+    0x2a: ('USER?', bytes.decode, False),
 }
 
 FIELD_PARSERS_V2 = {
     0x14: ('DST_MACID', str, False),
     0x18: ('MGMT_IS_LOCATING', lambda data: int.from_bytes(data, 'big'), False),
+    0x2a: ('unknown ?', str, False),
 }
 
 # UBNT discovery packet payload and reply signature
@@ -134,7 +135,7 @@ def ubntResponseParse(rcv):
     elif payload[0:3] == UBNT_V2_SIGNATURE:
         Device = {}          # This should be a valid discovery broadcast packet sent by an Ubiquiti device
         Device['Signature version'] = '2'
-        fieldparsersPacketSpecific = {**FIELD_PARSERS, **FIELD_PARSERS_V1}
+        fieldparsersPacketSpecific = {**FIELD_PARSERS, **FIELD_PARSERS_V2}
     else:
         return False            # Not a valid UBNT discovery reply, skip to next received packet
 
