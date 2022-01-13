@@ -75,6 +75,8 @@ FIELD_PARSERS = {
 #these need better names
     0x24: ('unknown int?', lambda data: int.from_bytes(data, 'big'), False),
     0x2c: ('unknown bool', lambda data: int.from_bytes(data, 'big'), False),
+    0x2f: ('unknown new1', mac_repr, False),
+    0x26: ('unknown new2', str, False),
 }
 
 # if unknown7 = 0 then unknown8 is all 0's
@@ -95,9 +97,10 @@ FIELD_PARSERS_V2 = {
 UBNT_REQUEST_PAYLOAD = b'\x01\x00\x00\x00'
 UBNT_V1_SIGNATURE = b'\x01\x00\x00'
 UBNT_V2_SIGNATURE = b'\x02\x06\x00'
+UBNT_UNKNOW_SIGNATURE = b'\x00\x00\x00\x77'
 
 # Discovery timeout. Change this for quicker discovery
-DISCOVERY_TIMEOUT_ACTIVE = 2
+DISCOVERY_TIMEOUT_ACTIVE = 5
 DISCOVERY_TIMEOUT_PASSIVE = 10
 
 def parse_args():
@@ -135,6 +138,10 @@ def ubntResponseParse(rcv):
     elif payload[0:3] == UBNT_V2_SIGNATURE:
         Device = {}          # This should be a valid discovery broadcast packet sent by an Ubiquiti device
         Device['Signature version'] = '2'
+        fieldparsersPacketSpecific = {**FIELD_PARSERS, **FIELD_PARSERS_V2}
+    elif payload[0:4] == UBNT_UNKNOW_SIGNATURE:
+        Device = {}
+        Device['Signature version'] = 'unknown'
         fieldparsersPacketSpecific = {**FIELD_PARSERS, **FIELD_PARSERS_V2}
     else:
         return False            # Not a valid UBNT discovery reply, skip to next received packet
