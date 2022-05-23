@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 ##########################################
 #   UBNT command line discovery tool     #
@@ -95,7 +95,7 @@ def ubntDiscovery(iface):
     ubnt_discovery_packet = Ether(dst="ff:ff:ff:ff:ff:ff", src=src_mac)/\
                             IP(dst="255.255.255.255")/\
                             UDP(sport=randint(1024,65535),dport=10001)/\
-                            Raw(UBNT_REQUEST_PAYLOAD.decode('hex'))
+                            Raw(bytes.fromhex(UBNT_REQUEST_PAYLOAD).decode('utf-8'))
     ans, unans = srp(ubnt_discovery_packet,
                      multi=True,    # We want to allow multiple radios to reply to our discovery packet
                      verbose=0,     # Suppress scapy output
@@ -110,7 +110,7 @@ def ubntDiscovery(iface):
         payload = rcv[IP].load
 
         # Check for a valid UBNT discovery reply (first 3 bytes of the payload should be \x01\x00\x00)
-        if payload[0:3].encode('hex') == UBNT_REPLY_SIGNATURE:
+        if bytes.hex(payload[0:3]) == UBNT_REPLY_SIGNATURE:
             Radio = {}          # This should be a valid discovery reply packet sent by an Ubiquiti radio
         else:
             continue            # Not a valid UBNT discovery reply, skip to next received packet
@@ -128,21 +128,20 @@ def ubntDiscovery(iface):
 
         # Retrieve payload size (excluding initial signature)
         pointer = offset_PayloadRemainingBytes
-        remaining_bytes = int( payload[pointer].encode('hex'), 16 )
+        remaining_bytes = payload[pointer]  # decoded as 8-bit unsigned int by default
 
         # Walk the reply payload, staring from offset 04 (just after reply signature and payload size).
         pointer += 1
         remaining_bytes -= 1
         while remaining_bytes > 0:
-            fieldType = payload[pointer].encode('hex')
+            fieldType = bytes.hex(payload[pointer:pointer+1])
             pointer += 1
             remaining_bytes -= 1
-            fieldLen = payload[pointer:pointer+2].encode('hex') # Data length is stored as a 16-bit word
-            fieldLen = int( fieldLen, 16 )
+            fieldLen = int.from_bytes(payload[pointer:pointer+2], 'big')  # Data length is stored as a 16-bit word
             pointer += 2
             remaining_bytes -= 2
             fieldData = payload[pointer:pointer+fieldLen]
-            if  fieldType == UBNT_RADIONAME:
+            if fieldType == UBNT_RADIONAME:
                 RadioName = fieldData
             elif fieldType == UBNT_MODEL_FULL:
                 RadioModel = fieldData
@@ -151,11 +150,11 @@ def ubntDiscovery(iface):
             elif fieldType == UBNT_FIRMWARE:
                 RadioFirmware = fieldData
             elif fieldType == UBNT_UPTIME:
-                RadioUptime = int(fieldData.encode('hex'), 16)
+                RadioUptime = int.from_bytes(fieldData, 'big')
             elif fieldType == UBNT_ESSID:
                 RadioEssid = fieldData
             elif fieldType == UBNT_WLAN_MODE:
-                RadioWlanMode = UBNT_WIRELESS_MODES[fieldData]
+                RadioWlanMode = UBNT_WIRELESS_MODES[fieldData.decode()]
             elif fieldType == UBNT_MAC_AND_IP:
                 # There might be several IPs
                 # Let's use the latest seen that is *not* 169.254.X.X (APIPA)
@@ -169,12 +168,12 @@ def ubntDiscovery(iface):
         # Store the data we gathered from the reply packet
         Radio['ip']             = RadioIP
         Radio['mac']            = RadioMAC
-        Radio['name']           = RadioName
-        Radio['model']          = RadioModel
-        Radio['essid']          = RadioEssid
-        Radio['firmware']       = RadioFirmware
+        Radio['name']           = RadioName.decode()
+        Radio['model']          = RadioModel.decode()
+        Radio['essid']          = RadioEssid.decode()
+        Radio['firmware']       = RadioFirmware.decode()
         Radio['uptime']         = RadioUptime
-        Radio['model_short']    = RadioModelShort
+        Radio['model_short']    = RadioModelShort.decode()
         Radio['wlan_mode']      = RadioWlanMode
         RadioList.append(Radio)
 
