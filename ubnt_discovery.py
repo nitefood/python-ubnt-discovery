@@ -2,8 +2,10 @@
 
 ##########################################
 #   UBNT command line discovery tool     #
-# Adriano Provvisiero - BV Networks 2016 #
-#         www.bvnetworks.it              #
+# Note: this script is very outdated and #
+# unmaintained! Leaving this up just for #
+# educational purpose, but please look   #
+# better and more recent alternatives.   #
 ##########################################
 
 from random import randint
