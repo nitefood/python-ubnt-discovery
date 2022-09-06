@@ -7,16 +7,22 @@ Command line python script to discover Ubiquiti devices on the local LAN segment
 
 ####Ubiquiti Discovery Protocol brief description
 
-*Disclaimer: this code is based exclusively on packet sniffing and analysis, there are some fields that remain unknown to me.
-This code may therefore not be compatible with all devices.
-I have not tested this on Unifi APs or EdgeOS products.*
+*Disclaimer: there are some fields that remain unknown. This code may therefore not be compatible with all devices.*
 
-Ubiquiti discovery works by sending an UDP packet to the local broadcast address (255.255.255.255) on port **10001**,
+specify the interface with `--interface <interface name>` or/and load a pcap file with `--pcap <file>`
+
+There are multiple methods of the Ubiquiti discovery protocol.
+
+Method 1 works by sending an UDP packet to the local broadcast address (255.255.255.255) on port **10001**,
 containing 4 bytes in the payload, namely `01 00 00 00`, and waiting for UDP replies destined to the local
 broadcast address.
 
+Method 2 works by periodacly sending an UDP packet to the local broadcast address (255.255.255.255) on port **10001**.
+
+Method 3 is multicast on the address 233.89.188.1.
+
 The payload of the reply packet sent by the radio is structured as follows:
-- offset `00` (3 bytes) : *Ubiquiti discovery reply signature (*`0x01 0x00 0x00`*). We'll check this to make sure it's a valid discovery-reply packet.*
+- offset `00` (3 bytes) : *Ubiquiti discovery reply signature the first byte is the version. Depending on the version the field definitions change.*
 - offset `03` (1 byte) : *Payload size (excluding signature)*
 
 Starting at offset `04`, the structure of the payload is as follows:
